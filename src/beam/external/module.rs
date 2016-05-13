@@ -5,6 +5,7 @@ use std::io::Error as IoError;
 use std::io::ErrorKind;
 use std::io::Cursor;
 use std::collections::HashSet;
+use beam::term::Term;
 use beam::term::Atom;
 use beam::term::ExternalFun;
 use beam::term::Arity;
@@ -18,6 +19,7 @@ pub struct Module {
     pub atoms: Option<Vec<Atom>>,
     pub imports: Option<Vec<ExternalFun>>,
     pub exports: Option<Vec<Export>>,
+    pub abstract_form: Option<Term>,
     pub unknown_chunks: Vec<form::Chunk>,
 }
 
@@ -59,6 +61,7 @@ impl Module {
                 b"Atom" => try!(module.load_atoms(Cursor::new(chunk.data))),
                 b"ImpT" => try!(module.load_imports(Cursor::new(chunk.data))),
                 b"ExpT" => try!(module.load_exports(Cursor::new(chunk.data))),
+                b"Abst" => try!(module.load_abstract_form(Cursor::new(chunk.data))),
                 _ => module.unknown_chunks.push(chunk),
             }
         }
@@ -117,6 +120,12 @@ impl Module {
         Ok(())
     }
 
+    fn load_abstract_form<R: Read>(&mut self, reader: R) -> IoResult<()> {
+        let abstract_form = try!(super::term::from_reader(reader));
+        self.abstract_form = Some(abstract_form);
+        Ok(())
+    }
+
     fn get_atom(&self, atom_id: usize) -> IoResult<Atom> {
         if let Some(ref atoms) = self.atoms {
             if atom_id >= atoms.len() {
@@ -151,6 +160,7 @@ mod tests {
     use std;
     use std::fs::File;
     use std::path::PathBuf;
+    use beam::term::*;
     use super::*;
 
     #[test]
@@ -181,6 +191,10 @@ mod tests {
                         ("world".to_string(), 0, 2)],
                    module.exports.unwrap().iter().map(|x| x.to_tuple()).collect::<Vec<_>>());
 
+        // Abst chunk
+        assert_eq!(Term::Atom(Atom::new("TODO".to_string())),
+                   module.abstract_form.unwrap());
+
         // Remaining chunks
         assert_eq!(vec!["Code".to_string(),
                         "StrT".to_string(),
@@ -188,7 +202,6 @@ mod tests {
                         "LocT".to_string(),
                         "Attr".to_string(),
                         "CInf".to_string(),
-                        "Abst".to_string(),
                         "Line".to_string()],
                    module.unknown_chunks
                          .iter()

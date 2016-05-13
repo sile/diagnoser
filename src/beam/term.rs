@@ -3,7 +3,10 @@ use std::fmt::Display;
 
 pub type Arity = usize;
 
-pub enum Term {}
+#[derive(Debug,PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum Term {
+    Atom(Atom),
+}
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
 pub struct Atom {
