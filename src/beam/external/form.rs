@@ -8,6 +8,7 @@ use std::default::Default;
 use byteorder::ReadBytesExt;
 use byteorder::BigEndian;
 
+#[derive(Debug)]
 pub struct Form {
     pub header: Header,
     pub chunks: Vec<Chunk>,
@@ -23,7 +24,7 @@ impl Form {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Header {
     pub magic_number: [u8; 4],
     pub form_type: [u8; 4],
@@ -34,7 +35,7 @@ impl Header {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Chunk {
     pub id: [u8; 4],
     pub data: Vec<u8>,
