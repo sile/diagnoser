@@ -16,12 +16,22 @@ impl Form {
     pub fn from_reader<R: Read>(reader: R) -> IoResult<Form> {
         Decoder::new(reader).decode()
     }
+
+    pub fn external_size(&self) -> u32 {
+        let initial = self.header.external_size();
+        self.chunks.iter().fold(initial, |acc, c| acc + c.external_size())
+    }
 }
 
 #[derive(Default)]
 pub struct Header {
     pub magic_number: [u8; 4],
     pub form_type: [u8; 4],
+}
+impl Header {
+    pub fn external_size(&self) -> u32 {
+        4 + 4 + 4
+    }
 }
 
 #[derive(Default)]
@@ -30,7 +40,7 @@ pub struct Chunk {
     pub data: Vec<u8>,
 }
 impl Chunk {
-    pub fn size(&self) -> u32 {
+    pub fn external_size(&self) -> u32 {
         4 + 4 + self.data.len() as u32
     }
 }
@@ -62,7 +72,7 @@ impl<R: Read> Decoder<R> {
         let mut chunks = Vec::new();
         while read_size < total_size {
             let chunk = try!(self.decode_chunk());
-            read_size += chunk.size();
+            read_size += chunk.external_size();
 
             let padding_size = (4 - read_size % 4) % 4;
             self.reader.consume(padding_size as usize);
