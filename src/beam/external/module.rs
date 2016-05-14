@@ -160,7 +160,6 @@ mod tests {
     use std;
     use std::fs::File;
     use std::path::PathBuf;
-    use beam::term::*;
     use super::*;
 
     #[test]
