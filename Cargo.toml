@@ -6,3 +6,5 @@ authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 [dependencies]
 clap = "*"
 byteorder = "*"
+flate2 = "*"
+num = "*"
