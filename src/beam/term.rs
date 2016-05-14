@@ -27,6 +27,9 @@ impl Term {
     pub fn new_integer_from_u64(x: u64) -> Self {
         Term::Integer(Integer::from_u64(x))
     }
+    pub fn new_integer_from_i64(x: i64) -> Self {
+        Term::Integer(Integer::from_i64(x))
+    }
     pub fn new_nil() -> Self {
         Term::Nil(Nil)
     }
@@ -59,6 +62,9 @@ pub struct Integer {
 impl Integer {
     pub fn from_u64(x: u64) -> Self {
         Integer { value: FromPrimitive::from_u64(x).unwrap() }
+    }
+    pub fn from_i64(x: i64) -> Self {
+        Integer { value: FromPrimitive::from_i64(x).unwrap() }
     }
 }
 impl Display for Integer {
