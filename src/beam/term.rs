@@ -3,6 +3,7 @@ use std::fmt::Display;
 use std::rc::Rc;
 use num::bigint::BigInt;
 use num::traits::FromPrimitive;
+use num::traits::ToPrimitive;
 
 pub type Arity = usize;
 
@@ -32,6 +33,16 @@ impl Term {
     }
     pub fn new_nil() -> Self {
         Term::Nil(Nil)
+    }
+
+    pub fn as_ref_term_level0(&self) -> RefTerm<&Term> {
+        RefTerm0::new(self)
+    }
+    pub fn as_ref_term_level1(&self) -> RefTerm<RefTerm0> {
+        RefTerm1::new(self)
+    }
+    pub fn as_ref_term_level2(&self) -> RefTerm<RefTerm1> {
+        RefTerm2::new(self)
     }
 }
 impl Display for Term {
@@ -165,5 +176,88 @@ impl ExternalFun {
 impl Display for ExternalFun {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "fun {}:{}/{}", self.module, self.function, self.arity)
+    }
+}
+
+
+// TODO: Moves to other module
+pub trait Child<'a> {
+    type Result;
+    fn new(&'a Term) -> Self::Result;
+}
+
+pub enum RefTerm<'a, T: Child<'a>> {
+    Atom(&'a str),
+    Tuple1((T::Result), &'a Tuple),
+    Tuple2((T::Result, T::Result), &'a Tuple),
+    Tuple3((T::Result, T::Result, T::Result), &'a Tuple),
+    Tuple4((T::Result, T::Result, T::Result, T::Result), &'a Tuple),
+    TupleN(&'a Tuple),
+    Nil,
+    List((T::Result, T::Result), &'a List),
+    FixInt(i64),
+    BigInt(&'a BigInt),
+}
+impl<'a, T: Child<'a>> RefTerm<'a, T> {
+    pub fn new(term: &'a Term) -> RefTerm<T> {
+        match *term {
+            Term::Atom(Atom{ref name}) => RefTerm::Atom(name),
+            Term::Integer(Integer{ref value}) => {
+                if let Some(n) = value.to_i64() {
+                    RefTerm::FixInt(n)
+                } else {
+                    RefTerm::BigInt(value)
+                }
+            }
+            Term::Nil(_) => RefTerm::Nil,
+            Term::List(ref list) => RefTerm::List((T::new(&list.head), T::new(&list.tail)), list),
+            Term::Tuple(ref tuple) => {
+                let e = &tuple.elements;
+                match e.len() {
+                    1 => RefTerm::Tuple1((T::new(&e[0])), tuple),
+                    2 => RefTerm::Tuple2((T::new(&e[0]), T::new(&e[1])), tuple),
+                    3 => RefTerm::Tuple3((T::new(&e[0]), T::new(&e[1]), T::new(&e[2])), tuple),
+                    4 => {
+                        RefTerm::Tuple4((T::new(&e[0]),
+                                         T::new(&e[1]),
+                                         T::new(&e[2]),
+                                         T::new(&e[3])),
+                                        tuple)
+                    }
+                    _ => RefTerm::TupleN(tuple),
+                }
+            }
+        }
+    }
+}
+
+impl<'a> Child<'a> for &'a Term {
+    type Result = Self;
+    fn new(term: &'a Term) -> Self::Result {
+        term
+    }
+}
+
+pub struct RefTerm0;
+impl<'a> Child<'a> for RefTerm0 {
+    type Result = RefTerm<'a, &'a Term>;
+    fn new(term: &'a Term) -> Self::Result {
+        RefTerm::new(term)
+    }
+}
+
+pub struct RefTerm1;
+impl<'a> Child<'a> for RefTerm1 {
+    type Result = RefTerm<'a, RefTerm0>;
+    fn new(term: &'a Term) -> Self::Result {
+        RefTerm::new(term)
+    }
+}
+
+pub struct RefTerm2;
+impl<'a> Child<'a> for RefTerm2 {
+    type Result = RefTerm<'a, RefTerm1>;
+    fn new(term: &'a Term) -> Self::Result {
+        RefTerm::new(term)
     }
 }

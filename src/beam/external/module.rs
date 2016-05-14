@@ -19,7 +19,7 @@ pub struct Module {
     pub atoms: Option<Vec<Atom>>,
     pub imports: Option<Vec<ExternalFun>>,
     pub exports: Option<Vec<Export>>,
-    pub abstract_form: Option<Term>,
+    pub abstract_code: Option<Term>,
     pub unknown_chunks: Vec<form::Chunk>,
 }
 
@@ -61,7 +61,7 @@ impl Module {
                 b"Atom" => try!(module.load_atoms(Cursor::new(chunk.data))),
                 b"ImpT" => try!(module.load_imports(Cursor::new(chunk.data))),
                 b"ExpT" => try!(module.load_exports(Cursor::new(chunk.data))),
-                b"Abst" => try!(module.load_abstract_form(Cursor::new(chunk.data))),
+                b"Abst" => try!(module.load_abstract_code(Cursor::new(chunk.data))),
                 _ => module.unknown_chunks.push(chunk),
             }
         }
@@ -120,9 +120,9 @@ impl Module {
         Ok(())
     }
 
-    fn load_abstract_form<R: Read>(&mut self, reader: R) -> IoResult<()> {
-        let abstract_form = try!(super::term::from_reader(reader));
-        self.abstract_form = Some(abstract_form);
+    fn load_abstract_code<R: Read>(&mut self, reader: R) -> IoResult<()> {
+        let abstract_code = try!(super::term::from_reader(reader));
+        self.abstract_code = Some(abstract_code);
         Ok(())
     }
 
@@ -192,7 +192,7 @@ mod tests {
 
         // Abst chunk
         assert_eq!(r###"{raw_abstract_v1,[{attribute,1,file,{[104,101,108,108,111,46,101,114,108],1}},{attribute,1,module,hello},{attribute,3,export,[{world,0}]},{attribute,5,spec,{{world,0},[{type,5,fun,[{type,5,product,[]},{atom,5,ok}]}]}},{function,6,world,0,[{clause,6,[],[],[{call,7,{remote,7,{atom,7,io},{atom,7,format}},[{string,7,[72,101,108,108,111,32,87,111,114,108,100]}]},{atom,8,ok}]}]},{eof,9}]}"###.to_string(),
-                   module.abstract_form.unwrap().to_string());
+                   module.abstract_code.unwrap().to_string());
 
         // Remaining chunks
         assert_eq!(vec!["Code".to_string(),
