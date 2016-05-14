@@ -192,8 +192,8 @@ mod tests {
                    module.exports.unwrap().iter().map(|x| x.to_tuple()).collect::<Vec<_>>());
 
         // Abst chunk
-        assert_eq!(Term::Atom(Atom::new("TODO".to_string())),
-                   module.abstract_form.unwrap());
+        assert_eq!(r###"{raw_abstract_v1,[{attribute,1,file,{[104,101,108,108,111,46,101,114,108],1}},{attribute,1,module,hello},{attribute,3,export,[{world,0}]},{attribute,5,spec,{{world,0},[{type,5,fun,[{type,5,product,[]},{atom,5,ok}]}]}},{function,6,world,0,[{clause,6,[],[],[{call,7,{remote,7,{atom,7,io},{atom,7,format}},[{string,7,[72,101,108,108,111,32,87,111,114,108,100]}]},{atom,8,ok}]}]},{eof,9}]}"###.to_string(),
+                   module.abstract_form.unwrap().to_string());
 
         // Remaining chunks
         assert_eq!(vec!["Code".to_string(),
