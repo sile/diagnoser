@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 
 [dependencies]
-clap = "*"
-byteorder = "*"
-flate2 = "*"
-num = "*"
+clap = "2.5"
+byteorder = "0.5"
+flate2 = "0.2"
+num = "0.1"
+erl_ast = "0.0.1"
