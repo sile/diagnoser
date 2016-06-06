@@ -3,3 +3,5 @@ extern crate erl_ast;
 
 pub mod beam;
 pub mod erl_type;
+pub mod typing;
+

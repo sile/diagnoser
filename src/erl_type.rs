@@ -1,6 +1,5 @@
 //! See: [Types and Function Specifications](http://erlang.org/doc/reference_manual/typespec.html)
 use std::collections::HashSet;
-use std::ops::Range;
 
 pub struct TypeDictionary;
 impl TypeDictionary {
@@ -8,7 +7,10 @@ impl TypeDictionary {
         // TODO: Add built-in functions
         TypeDictionary
     }
-    pub fn get(&self, name: String, args: Vec<String>) -> Option<&Type> {
+    pub fn get_local(&self, name: String, args: Vec<String>) -> Option<&Type> {
+        unimplemented!()
+    }
+    pub fn get_remote(&self, module: String, name: String, args: Vec<String>) -> Option<&Type> {
         unimplemented!()
     }
 }
@@ -66,7 +68,12 @@ pub struct FunSpec {
 }
 
 pub struct IntegerType {
-    pub ranges: Option<Vec<Range<i64>>>,
+    pub ranges: Option<Vec<IntegerRange>>,
+}
+
+pub struct IntegerRange {
+    pub start: Option<i64>,
+    pub end: Option<i64>,
 }
 
 pub enum ListType {
