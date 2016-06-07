@@ -113,14 +113,60 @@ fn ast_type_to_erl_type(ty: &ast::ty::Type) -> Type {
         ty::Type::Annotated(ref x) => {
             From::from(erl_type::Var::with_value(&x.name.name, ast_type_to_erl_type(&x.ty)))
         }
-        ty::Type::UnaryOp(ref x) => unimplemented!(),
-        ty::Type::BinaryOp(ref x) => unimplemented!(),
-        ty::Type::BitString(ref x) => unimplemented!(),
+        ty::Type::UnaryOp(ref x) => {
+            assert_eq!("'-'", x.operator);
+            let operand = if let erl_type::Type::Integer(operand) =
+                                 ast_type_to_erl_type(&x.operand) {
+                operand.get_single_value().unwrap()
+            } else {
+                panic!("{:?}", x.operand);
+            };
+            From::from(erl_type::integer().value(-operand))
+        }
+        ty::Type::BinaryOp(ref x) => panic!("{:?}", ty),
+        ty::Type::BitString(ref x) => panic!("{:?}", ty),
         ty::Type::Nil(ref x) => From::from(erl_type::NilType),
         ty::Type::AnyFun(ref x) => From::from(erl_type::FunType::any()),
-        ty::Type::Function(ref x) => unimplemented!(),
-        ty::Type::Range(ref x) => unimplemented!(),
-        ty::Type::Map(ref x) => unimplemented!(),
+        ty::Type::Function(ref x) => {
+            assert!(x.constraints.is_empty());
+            From::from(erl_type::FunType {
+                spec: Some(erl_type::FunSpec {
+                    args: Some(x.args.iter().map(ast_type_to_erl_type).collect()),
+                    return_type: ast_type_to_erl_type(&x.return_type),
+                }),
+            })
+        }
+        ty::Type::Range(ref x) => {
+            let mut range = erl_type::integer();
+            if let erl_type::Type::Integer(low) = ast_type_to_erl_type(&x.low) {
+                if !low.is_any() {
+                    range = range.min(low.get_single_value().unwrap());
+                }
+            } else {
+                panic!("{:?}", x.low);
+            };
+            let high = if let erl_type::Type::Integer(high) = ast_type_to_erl_type(&x.high) {
+                if !high.is_any() {
+                    range = range.max(high.get_single_value().unwrap());
+                }
+            } else {
+                panic!("{:?}", x.high);
+            };
+            From::from(range)
+        }
+        ty::Type::Map(ref x) => {
+            From::from(erl_type::MapType {
+                pairs: x.pairs
+                    .iter()
+                    .map(|p| {
+                        erl_type::MapPair {
+                            key: ast_type_to_erl_type(&p.key),
+                            value: ast_type_to_erl_type(&p.value),
+                        }
+                    })
+                    .collect(),
+            })
+        }
         ty::Type::BuiltIn(ref x) => {
             From::from(erl_type::builtin(&x.name,
                                          &x.args
@@ -128,12 +174,41 @@ fn ast_type_to_erl_type(ty: &ast::ty::Type) -> Type {
                                              .map(ast_type_to_erl_type)
                                              .collect::<Vec<_>>()))
         }
-        ty::Type::Record(ref x) => unimplemented!(),
-        ty::Type::Remote(ref x) => unimplemented!(),
+        ty::Type::Record(ref x) => {
+            Type::from(erl_type::RecordType {
+                name: x.name.clone(),
+                fields: x.fields
+                    .iter()
+                    .map(|f| {
+                        erl_type::RecordField {
+                            name: f.name.clone(),
+                            value: ast_type_to_erl_type(&f.ty),
+                        }
+                    })
+                    .collect(),
+            })
+        }
+        ty::Type::Remote(ref x) => {
+            erl_type::remote(&x.module,
+                             &x.function,
+                             &x.args.iter().map(ast_type_to_erl_type).collect::<Vec<_>>())
+        }
         ty::Type::AnyTuple(ref x) => From::from(erl_type::TupleType::any()),
-        ty::Type::Tuple(ref x) => unimplemented!(),
-        ty::Type::Union(ref x) => unimplemented!(),
-        ty::Type::User(ref x) => unimplemented!(),
+        ty::Type::Tuple(ref x) => {
+            From::from(erl_type::TupleType {
+                elements: Some(x.elements.iter().map(ast_type_to_erl_type).collect()),
+            })
+        }
+        ty::Type::Union(ref x) => {
+            From::from(erl_type::UnionType::new(x.types
+                .iter()
+                .map(ast_type_to_erl_type)
+                .collect()))
+        }
+        ty::Type::User(ref x) => {
+            erl_type::local(&x.name,
+                            &x.args.iter().map(ast_type_to_erl_type).collect::<Vec<_>>())
+        }
     }
 }
 

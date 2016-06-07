@@ -31,6 +31,7 @@ pub enum Type {
     Integer(Box<IntegerType>),
     List(Box<ListType>),
     Map(Box<MapType>),
+    Record(Box<RecordType>),
     Tuple(Box<TupleType>),
     Union(Box<UnionType>),
     UserDefined(Box<UserDefinedType>),
@@ -60,6 +61,7 @@ impl_from!(Type::Fun(FunType));
 impl_from!(Type::Integer(IntegerType));
 impl_from!(Type::List(ListType));
 impl_from!(Type::Map(MapType));
+impl_from!(Type::Record(RecordType));
 impl_from!(Type::Tuple(TupleType));
 impl_from!(Type::Union(UnionType));
 impl_from!(Type::UserDefined(UserDefinedType));
@@ -175,8 +177,8 @@ pub struct FunSpec {
 
 #[derive(Debug, Clone)]
 pub struct IntegerType {
-    min: Option<i64>, // `None` means "infinity"
-    max: Option<i64>,
+    pub min: Option<i64>, // `None` means "infinity"
+    pub max: Option<i64>,
 }
 impl ProtoType for IntegerType {}
 impl IntegerType {
@@ -190,6 +192,16 @@ impl IntegerType {
     }
     pub fn value(mut self, value: i64) -> Self {
         self.min(value).max(value)
+    }
+    pub fn get_single_value(&self) -> Option<i64> {
+        if self.min == self.max {
+            self.min
+        } else {
+            None
+        }
+    }
+    pub fn is_any(&self) -> bool {
+        self.min.is_none() && self.max.is_none()
     }
 }
 pub fn integer() -> IntegerType {
@@ -277,6 +289,19 @@ impl MapType {
     pub fn any() -> Self {
         MapType { pairs: Vec::new() }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct RecordType {
+    pub name: String,
+    pub fields: Vec<RecordField>,
+}
+impl ProtoType for RecordType {}
+
+#[derive(Debug, Clone)]
+pub struct RecordField {
+    pub name: String,
+    pub value: Type,
 }
 
 #[derive(Debug, Clone)]
