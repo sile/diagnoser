@@ -1,82 +1,206 @@
+use std::iter::FromIterator;
+use std::collections::HashMap;
+use erl_ast::ast;
 use erl_type;
+use erl_type::Type;
+use erl_type::TypeClass;
+use erl_type::FunSpec;
+use beam::Module;
 
-struct Node {
-    pub inputs: Vec<Input>,
-    pub output: Output,
+#[derive(Hash, PartialEq, Eq, Debug)]
+pub struct TypeKey {
+    pub module: Option<String>, // `None` means "a built-in type"
+    pub name: String,
+    pub arity: u8,
 }
-
-pub struct Input {
-    pub node: Node,
-    pub constraint: Type,
-}
-
-pub struct Output {
-    pub node: Node,
-    pub constraint: Type,
-}
-
-pub struct Match {
-    pub value: Type,
-    pub pattern: Type,
-    pub gurad: Type,
-}
-
-pub struct Case {
-    pub value: Type,
-    pub clauses: Vec<Clause>,
-}
-
-pub enum Contract {
+impl TypeKey {
+    pub fn builtin(name: &str, arity: u8) -> Self {
+        TypeKey {
+            module: None,
+            name: name.to_string(),
+            arity: arity,
+        }
     }
-
-
-// [memo]
-// 範囲が狭まるケース(intersection):
-// - パターンマッチ:
-//   - 変数の束縛や関数呼び出しもこの一種
-//   - 左辺値と右辺値の型集合の共通部分が、左辺値の新しい型となる
-// - ガード:
-//   - パターンマッチに対する追加の制約
-//
-// 範囲が広まるケース(union):
-// - clause:
-//   - 入出力ともに、全ての節の和集合となる
-//
-// 環境の変更:
-// - 変数束縛全般 (e.g., 新しい変数名が出現したらその都度)
-
-pub struct Node {
-    pub use_type: Type,
-    pub allow_type: Type,
+    pub fn remote(module: &str, name: &str, arity: u8) -> Self {
+        TypeKey {
+            module: Some(module.to_string()),
+            name: name.to_string(),
+            arity: arity,
+        }
+    }
 }
 
-// ---- これより上は古い -----
+#[derive(Hash, PartialEq, Eq, Debug)]
+pub struct SpecKey {
+    pub module: String,
+    pub function: String,
+    pub arity: u8,
+}
 
-// [memo]
-// 各ノードには"許容する型"と"実際に使われている型"がある:
-// - 前者は、ボトムアップに定まるもの (term()から始まる狭まっていく)
-// - 後者は、トップダウンに定まるもの (none()から始まり広がっていく)
-//   - 内部関数のように、利用者の集合に上限があるものに関しては、前者が後者を包含する場合には、後者を狭める形で利用することが可能
-//   - 論文中のrefine周り
-//
-// 全ての変数(式)は初期値は`{使用:none(), 許容:any()}`となる:
-// - "式"といいつつパターンやガードも含む
-//   - e.g., ガードの場合には許容型に`true`が含まれている必要がある (そうではないなら、そのガードは無意味)
-// - openなuse_typeには、`any()`が必ず付与される
-// - allow_typeに関しては、specが指定されているものに関しては、any()ではなく、そのspecの値が初期値となる
-// - fixpointに至るまでは、iterationを繰り返す
-//   - 有限性の保証は論文と同様
-// - use_typeとallow_typeの共通集合がnone()の場合には、型エラー
+pub struct Env {
+    pub modules: Vec<Module>, // TODO: HashMap<String, Module>
+    pub types: HashMap<TypeKey, Box<TypeClass>>,
+    pub specs: HashMap<SpecKey, FunSpec>, // TODO: => ftypes(?)
+}
+impl Env {
+    pub fn new() -> Self {
+        let types = HashMap::from_iter(built_in_types().into_iter());
+        Env {
+            modules: Vec::new(),
+            types: types,
+            specs: HashMap::new(),
+        }
+    }
+    pub fn add_module(&mut self, module: Module) {
+        self.load_types(&module);
+        self.load_specs(&module);
+        self.modules.push(module);
+    }
+    pub fn load_types(&mut self, module: &Module) {
+        // TODO: Add Form::get_module()
+        let module_name = module.ast
+            .module
+            .forms
+            .iter()
+            .filter_map(|f| {
+                if let ast::form::Form::Module(ref m) = *f {
+                    Some(m.name.to_string())
+                } else {
+                    None
+                }
+            })
+            .nth(0)
+            .unwrap();
+        for f in &module.ast.module.forms {
+            let decl = if let ast::form::Form::Type(ref decl) = *f {
+                decl
+            } else {
+                continue;
+            };
+            let key = TypeKey::remote(&module_name, &decl.name, decl.vars.len() as u8);
+            let value = type_decl_to_type_class(decl);
+            self.types.insert(key, value);
+        }
+    }
+    pub fn load_specs(&mut self, module: &Module) {
+        // NOTE: We assume that functions which have
+        // no spec are typed with `-spec Fun(...) -> any()`
+        unimplemented!()
+    }
+}
 
-// [memo:解析の流れ]
-// とりあえずは、全てオンメモリで一度に処理すると仮定
-//
-// 1) 関数呼び出しや型定義を元に、モジュールの依存グラフを構築
-// 2) 同時に、ユーザ型の定義の辞書を構築
-// 3) 依存グラフの末端モジュールから順に解析していく
-//   - 相互依存にあるモジュール群に関しては、escapedな関数のspecが固まるまでiterationされる
-//   - => 「変更があったら、その依存元も再解析」というルールに一般化可能
-// 4) 一つのモジュール内ではボトムアップとトップダウンの両方(e.g., use_type/allow_type)からの解析を行う
-// 5) モジュールを跨ぐ場合には、参照先の関数のallow_typeを利用するのみとする
-//   - 利用元のuse_typeを使って、利用先の再解析を行うことはない
-// 6) 全てのモジュールのescapedな関数の方がfixpointに到達するまで処理を進める
+fn type_decl_to_type_class(decl: &ast::form::TypeDecl) -> Box<TypeClass> {
+    Box::new(erl_type::UserDefinedClass {
+        is_opaque: decl.is_opaque,
+        name: decl.name.clone(),
+        vars: decl.vars.iter().map(|v| v.name.clone()).collect(),
+        body: ast_type_to_erl_type(&decl.ty),
+    })
+}
+fn ast_type_to_erl_type(ty: &ast::ty::Type) -> Type {
+    use erl_ast::ast::ty;
+    match *ty {
+        ty::Type::Atom(ref x) => erl_type::atom(&x.value),
+        ty::Type::Integer(ref x) => {
+            use ::num::traits::ToPrimitive;
+            if let Some(v) = x.value.to_i64() {
+                From::from(erl_type::integer().value(v))
+            } else {
+                From::from(erl_type::integer())
+            }
+        }
+        ty::Type::Var(ref x) => From::from(erl_type::Var::new(&x.name)),
+        ty::Type::Annotated(ref x) => {
+            From::from(erl_type::Var::with_value(&x.name.name, ast_type_to_erl_type(&x.ty)))
+        }
+        ty::Type::UnaryOp(ref x) => unimplemented!(),
+        ty::Type::BinaryOp(ref x) => unimplemented!(),
+        ty::Type::BitString(ref x) => unimplemented!(),
+        ty::Type::Nil(ref x) => From::from(erl_type::NilType),
+        ty::Type::AnyFun(ref x) => From::from(erl_type::FunType::any()),
+        ty::Type::Function(ref x) => unimplemented!(),
+        ty::Type::Range(ref x) => unimplemented!(),
+        ty::Type::Map(ref x) => unimplemented!(),
+        ty::Type::BuiltIn(ref x) => {
+            From::from(erl_type::builtin(&x.name,
+                                         &x.args
+                                             .iter()
+                                             .map(ast_type_to_erl_type)
+                                             .collect::<Vec<_>>()))
+        }
+        ty::Type::Record(ref x) => unimplemented!(),
+        ty::Type::Remote(ref x) => unimplemented!(),
+        ty::Type::AnyTuple(ref x) => From::from(erl_type::TupleType::any()),
+        ty::Type::Tuple(ref x) => unimplemented!(),
+        ty::Type::Union(ref x) => unimplemented!(),
+        ty::Type::User(ref x) => unimplemented!(),
+    }
+}
+
+pub trait WithType {
+    fn use_type(&self) -> &Type;
+    fn allow_type(&self) -> &Type;
+}
+
+pub fn built_in_types() -> Vec<(TypeKey, Box<TypeClass>)> {
+    use erl_type::*;
+    fn a0(name: &str) -> TypeKey {
+        TypeKey::builtin(name, 0)
+    }
+    fn a1(name: &str) -> TypeKey {
+        TypeKey::builtin(name, 1)
+    }
+    fn a2(name: &str) -> TypeKey {
+        TypeKey::builtin(name, 1)
+    }
+    vec![(a0("any"), Box::new(AnyType)),
+         (a0("none"), Box::new(NoneType)),
+         (a0("pid"), Box::new(PidType)),
+         (a0("port"), Box::new(PortType)),
+         (a0("reference"), Box::new(ReferenceType)),
+         (a0("nil"), Box::new(NilType)),
+         (a0("atom"), Box::new(AtomType::any())),
+         (a0("float"), Box::new(FloatType)),
+         (a0("fun"), Box::new(FunType::any())),
+         (a0("integer"), Box::new(integer())),
+         (a1("list"), Box::new(ProperListClass)),
+         (a2("maybe_improper_list"), Box::new(MaybeImproperListClass)),
+         (a2("nonempty_improper_list"), Box::new(NonEmptyImproperListClass)),
+         (a1("nonempty_list"), Box::new(NonEmptyListClass)),
+         (a0("map"), Box::new(MapType::any())),
+         (a0("tuple"), Box::new(TupleType::any())),
+         (a0("non_neg_integer"), Box::new(integer().min(0))),
+         (a0("pos_integer"), Box::new(integer().min(1))),
+         (a0("neg_integer"), Box::new(integer().max(-1))),
+
+         (a0("term"), Box::new(builtin0("any"))),
+         (a0("binary"), Box::new(BitstringType::default().align(8))),
+         (a0("bitstring"), Box::new(BitstringType::default().align(1))),
+         (a0("boolean"), Box::new(union(&[atom("true"), atom("false")]))),
+         (a0("byte"), Box::new(integer().min(0).max(255))),
+         (a0("char"), Box::new(integer().min(0).max(0x10ffff))),
+         (a0("number"), Box::new(union(&[builtin0("integer"), builtin0("float")]))),
+         (a0("list"), Box::new(builtin1("list", builtin0("any")))),
+         (a0("maybe_improper_list"),
+          Box::new(builtin2("maybe_improper_list", builtin0("any"), builtin0("any")))),
+         (a0("nonempty_list"), Box::new(builtin1("nonempty_list", builtin0("any")))),
+         (a0("string"), Box::new(builtin1("list", builtin0("char")))),
+         (a0("nonempty_string"), Box::new(builtin1("nonempty_list", builtin0("char")))),
+         (a0("iodata"), Box::new(union(&[builtin0("iolist"), builtin0("binary")]))),
+         (a0("iolist"),
+          Box::new(builtin1("maybe_improper_list",
+                            union(&[builtin0("byte"),
+                                    builtin0("binary"),
+                                    builtin0("iolist"),
+                                    builtin0("binary"),
+                                    builtin0("nil")])))),
+         (a0("function"), Box::new(builtin0("fun"))),
+         (a0("module"), Box::new(builtin0("atom"))),
+         (a0("mfa"), Box::new(tuple3(builtin0("module"), builtin0("atom"), builtin0("arity")))),
+         (a0("arity"), Box::new(integer().min(0).max(255))),
+         (a0("identifier"),
+          Box::new(union(&[builtin0("pid"), builtin0("port"), builtin0("reference")]))),
+         (a0("node"), Box::new(builtin0("atom"))),
+         (a0("timeout"), Box::new(union(&[atom("infinity"), builtin0("non_neg_integer")]))),
+         (a0("no_return"), Box::new(NoneType))]
+}
