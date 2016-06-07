@@ -226,7 +226,7 @@ pub fn built_in_types() -> Vec<(TypeKey, Box<TypeClass>)> {
         TypeKey::builtin(name, 1)
     }
     fn a2(name: &str) -> TypeKey {
-        TypeKey::builtin(name, 1)
+        TypeKey::builtin(name, 2)
     }
     vec![(a0("any"), Box::new(AnyType)),
          (a0("none"), Box::new(NoneType)),
