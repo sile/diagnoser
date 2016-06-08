@@ -61,6 +61,15 @@ impl Graph {
         })
     }
 
+    pub fn get_nth_arg(&mut self, node_id: NodeId, index: usize) -> Option<NodeId> {
+        self.nodes.get(&node_id).and_then(|node| {
+            match node.content {
+                 Content::Fun(ref x) => Some(x.args[index]),
+                _ => None 
+            }
+        })
+    }
+
     fn new_node(&mut self, content: Content) -> NodeId {
         let node_id = self.next_node_id();
         let node = Node::new(node_id, content);
