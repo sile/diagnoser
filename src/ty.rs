@@ -1,14 +1,15 @@
 //! See: [Types and Function Specifications](http://erlang.org/doc/reference_manual/typespec.html)
 #![allow(unused_variables)]
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub trait ProtoType: Clone {}
 
-pub trait TypeClass {
+pub trait TypeClass: Debug {
     fn make_instance(&self, args: &[Type]) -> Type;
 }
 impl<T> TypeClass for T
-    where T: ProtoType,
+    where T: ProtoType + Debug,
           Type: From<T>
 {
     fn make_instance(&self, args: &[Type]) -> Type {
@@ -73,6 +74,10 @@ impl ProtoType for Type {}
 impl Type {
     pub fn bind(&self, bindings: HashMap<String, Type>) -> Type {
         unimplemented!()
+    }
+    pub fn normalize(&self) -> Type {
+        // TODO:
+        self.clone()
     }
 }
 
@@ -161,12 +166,12 @@ impl ProtoType for FloatType {}
 
 #[derive(Debug, Clone)]
 pub struct FunType {
-    pub spec: Option<FunSpec>,
+    pub clauses: Vec<FunSpec>,
 }
 impl ProtoType for FunType {}
 impl FunType {
     pub fn any() -> Self {
-        FunType { spec: None }
+        FunType { clauses: Vec::new() }
     }
 }
 

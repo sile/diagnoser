@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use std::iter::FromIterator;
 use std::collections::HashMap;
 use erl_ast::ast;
