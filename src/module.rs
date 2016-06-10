@@ -51,6 +51,8 @@ impl ModuleBuilder {
         for form in &ast.module.forms {
             try!(self.handle_form(form));
         }
+        // TODO: Resolve imported functions
+
         let name = try!(self.name.ok_or("No `-module(...)` directive"));
         Ok(Module {
             name: name,

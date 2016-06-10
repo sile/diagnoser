@@ -37,7 +37,7 @@ impl FromAst for ty::Type {
                 From::from(ty::Var::with_value(&x.name.name, FromAst::from_ast(&x.ty)))
             }
             AstType::UnaryOp(ref x) => {
-                assert_eq!("'-'", x.operator);
+                assert_eq!("-", x.operator);
                 let operand = if let ty::Type::Integer(operand) = FromAst::from_ast(&x.operand) {
                     operand.get_single_value().unwrap()
                 } else {

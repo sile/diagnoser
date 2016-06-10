@@ -6,4 +6,7 @@ authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 [dependencies]
 clap = "2.5"
 num = "0.1"
-erl_ast = "0.0.1"
+# erl_ast = "0.0.3"
+
+[dependencies.erl_ast]
+git = "file:///home/ohta/dev/rust/erl_ast"

@@ -6,6 +6,7 @@ pub mod module;
 pub mod ty;
 pub mod ast;
 pub mod graph;
+pub mod graph_dot;
 pub mod meta;
 
 pub mod beam;
