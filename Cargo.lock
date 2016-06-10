@@ -3,7 +3,7 @@ name = "diagnoser"
 version = "0.1.0"
 dependencies = [
  "clap 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "erl_ast 0.0.3 (git+file:///home/ohta/dev/rust/erl_ast)",
+ "erl_ast 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -56,8 +56,8 @@ dependencies = [
 
 [[package]]
 name = "erl_ast"
-version = "0.0.3"
-source = "git+file:///home/ohta/dev/rust/erl_ast#1723b7cddbb21232032eb4a06b11c4fe822f53cd"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "beam_file 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "eetf 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
