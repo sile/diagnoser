@@ -1,9 +1,11 @@
 use std::collections::HashMap;
+
 use module::Module;
+use module::ModuleName;
 
 #[derive(Debug)]
 pub struct Env {
-    pub modules: HashMap<String, Module>,
+    pub modules: HashMap<ModuleName, Module>,
 }
 impl Env {
     pub fn new() -> Self {
