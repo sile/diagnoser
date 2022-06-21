@@ -6,7 +6,7 @@ pub trait FromAst {
     fn from_ast(ast: &Self::Input) -> Self;
 }
 
-impl FromAst for Box<ty::TypeClass> {
+impl FromAst for Box<dyn ty::TypeClass> {
     type Input = ast::form::TypeDecl;
     fn from_ast(decl: &Self::Input) -> Self {
         Box::new(ty::UserDefinedClass {

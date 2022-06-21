@@ -10,7 +10,7 @@ use ast::FromAst;
 use meta;
 
 pub type Arity = u8;
-pub type Result<T> = ::std::result::Result<T, Box<error::Error>>;
+pub type Result<T> = ::std::result::Result<T, Box<dyn error::Error>>;
 
 #[derive(Debug)]
 pub struct Module {
@@ -20,7 +20,7 @@ pub struct Module {
     pub callbacks: HashSet<Local>,
     pub export_types: HashSet<Local>,
     pub imports: HashSet<Remote>,
-    pub types: HashMap<Local, Box<TypeClass>>,
+    pub types: HashMap<Local, Box<dyn TypeClass>>,
     pub specs: HashMap<Local, Spec>,
     pub functions: HashMap<Local, meta::Function>,
 }
@@ -39,7 +39,7 @@ struct ModuleBuilder {
     callbacks: HashSet<Local>,
     export_types: HashSet<Local>,
     imports: HashSet<Remote>,
-    types: HashMap<Local, Box<TypeClass>>,
+    types: HashMap<Local, Box<dyn TypeClass>>,
     specs: HashMap<Local, Spec>,
     functions: HashMap<Local, meta::Function>,
 }
@@ -125,7 +125,7 @@ impl ModuleBuilder {
                     .collect();
                 self.specs.insert(key, Spec { clauses: clauses });
             }
-            Form::Record(ref x) => {
+            Form::Record(ref _x) => {
                 // TODO:
                 // panic!("RECORD: {:?}", x),
             }

@@ -40,7 +40,7 @@ pub struct SpecKey {
 
 pub struct Env {
     pub modules: Vec<Module>, // TODO: HashMap<String, Module>
-    pub types: HashMap<TypeKey, Box<TypeClass>>,
+    pub types: HashMap<TypeKey, Box<dyn TypeClass>>,
     pub specs: HashMap<SpecKey, FunSpec>, // TODO: => ftypes(?)
 }
 impl Env {
@@ -90,7 +90,7 @@ impl Env {
     }
 }
 
-fn type_decl_to_type_class(decl: &ast::form::TypeDecl) -> Box<TypeClass> {
+fn type_decl_to_type_class(decl: &ast::form::TypeDecl) -> Box<dyn TypeClass> {
     Box::new(erl_type::UserDefinedClass {
         is_opaque: decl.is_opaque,
         name: decl.name.clone(),
@@ -218,7 +218,7 @@ pub trait WithType {
     fn allow_type(&self) -> &Type;
 }
 
-pub fn built_in_types() -> Vec<(TypeKey, Box<TypeClass>)> {
+pub fn built_in_types() -> Vec<(TypeKey, Box<dyn TypeClass>)> {
     use erl_type::*;
     fn a0(name: &str) -> TypeKey {
         TypeKey::builtin(name, 0)

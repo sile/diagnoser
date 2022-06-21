@@ -223,11 +223,11 @@ pub enum Content {
 impl Content {
     pub fn label(&self) -> String {
         match *self {
-            Content::Fun(ref x) => format!("fun"),
+            Content::Fun(ref _x) => format!("fun"),
             Content::Val(ref x) => format!("({}=>{})", x.producible_type, x.consumable_type),
-            Content::LocalCall(ref x) => format!("local"),
-            Content::RemoteCall(ref x) => format!("remote"),
-            Content::Conj(ref x) => format!("conj"),
+            Content::LocalCall(ref _x) => format!("local"),
+            Content::RemoteCall(ref _x) => format!("remote"),
+            Content::Conj(ref _x) => format!("conj"),
         }
     }
     pub fn link_nodes(&self) -> Vec<(EdgeKind, NodeId)> {

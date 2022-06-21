@@ -63,7 +63,7 @@ impl GraphBuilder {
 
         {
             use std::fs;
-            use std::io::Write;
+            
             let f = fs::File::create(format!("/tmp/graph_{}_{}.dot", decl.name, arity)).unwrap();
             self.graph.write_as_dot(f).unwrap();
         }
@@ -367,7 +367,7 @@ impl GraphBuilder {
                 let node_id = self.graph.new_remote_call_node(module, fun, args);
                 self.graph.get_return_node(node_id).unwrap()
             }
-            E::AnonymousFun(ref x) => {
+            E::AnonymousFun(ref _x) => {
                 // TODO: handle escaped case
                 // self.scope_in();
                 // x.clauses,
