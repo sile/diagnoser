@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["Takeru Ohta <phjgt308@gmail.com>"]
 
 [dependencies]
-clap = "2.5"
+clap = { version = "4", features = ["derive"] }
 num = "0.4"
 erl_ast = "0.1.0"
